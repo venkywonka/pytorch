@@ -458,29 +458,8 @@ PyObject* rpc_init(PyObject* /* unused */) {
   // Base class: torch.distributed.rpc.RpcBackendOptions.
   py::class_<TensorPipeRpcBackendOptions>(
       module,
-      "TensorPipeRpcBackendOptions",
-      rpcBackendOptions,
-      R"(
-          The backend options for
-          :class:`~torch.distributed.rpc.TensorPipeAgent`, derived from
-          :class:`~torch.distributed.rpc.RpcBackendOptions`.
-
-          Arguments:
-              num_worker_threads (int, optional): The number of threads in the
-                  thread-pool used by
-                  :class:`~torch.distributed.rpc.TensorPipeAgent` to execute
-                  requests (default: 16).
-              rpc_timeout (float, optional): The default timeout, in seconds,
-                  for RPC requests (default: 60 seconds). If the RPC has not
-                  completed in this timeframe, an exception indicating so will
-                  be raised. Callers can override this timeout for individual
-                  RPCs in :meth:`~torch.distributed.rpc.rpc_sync` and
-                  :meth:`~torch.distributed.rpc.rpc_async` if necessary.
-              init_method (str, optional): The URL to initialize the distributed
-                  store used for rendezvous. It takes any value accepted for the
-                  same argument of :meth:`~torch.distributed.init_process_group`
-                  (default: ``env://``).
-      )")
+      "_TensorPipeRpcBackendOptionsBase",
+      rpcBackendOptions)
       .def(
           py::init<
               int,
@@ -500,7 +479,14 @@ PyObject* rpc_init(PyObject* /* unused */) {
               The number of threads in the thread-pool used by
               :class:`~torch.distributed.rpc.TensorPipeAgent` to execute
               requests.
-          )");
+          )")
+      .def_readwrite(
+          "device_maps",
+          &TensorPipeRpcBackendOptions::deviceMaps,
+          R"(The device map locations.)")
+      .def(
+          "set_device_map",
+          &TensorPipeRpcBackendOptions::setDeviceMap);
 
   module.attr("_DEFAULT_NUM_WORKER_THREADS") =
       py::cast(kDefaultNumWorkerThreads);
@@ -542,7 +528,11 @@ PyObject* rpc_init(PyObject* /* unused */) {
           "get_worker_infos",
           (std::vector<WorkerInfo>(TensorPipeAgent::*)() const) &
               TensorPipeAgent::getWorkerInfos,
-          py::call_guard<py::gil_scoped_release>());
+          py::call_guard<py::gil_scoped_release>())
+      .def(
+          "_set_reverse_device_maps",
+          // intentionally not releasing GIL to avoid unnecessary context switch
+          &TensorPipeAgent::setReverseDeviceMaps);
 
   module.def("_is_current_rpc_agent_set", &RpcAgent::isCurrentRpcAgentSet);
 
@@ -751,9 +741,7 @@ PyObject* rpc_init(PyObject* /* unused */) {
             applications responsibility to make sure that the above assumption
             always holds.
       )");
-  module.def(
-      "_disable_jit_rref_pickle",
-      &disableJitRRefPickle);
+  module.def("_disable_jit_rref_pickle", &disableJitRRefPickle);
 
   Py_RETURN_TRUE;
 }

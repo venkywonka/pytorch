@@ -33,7 +33,7 @@ class Context;
 
 } // namespace tensorpipe
 
- namespace torch {
+namespace torch {
 namespace distributed {
 namespace rpc {
 
@@ -92,9 +92,26 @@ struct TensorPipeRpcBackendOptions : public RpcBackendOptions {
     }
   }
 
+  void setDeviceMap(
+      const std::string& workerName,
+      const std::unordered_map<c10::DeviceIndex, c10::DeviceIndex>& deviceMap) {
+    auto iter = deviceMaps.find(workerName);
+    if (iter == deviceMaps.end()) {
+      deviceMaps[workerName] = deviceMap;
+    } else {
+      for (auto& entry : deviceMap) {
+        iter->second[entry.first] = entry.second;
+      }
+    }
+  }
+
   int numWorkerThreads;
   const optional<std::vector<std::string>> transports;
   const optional<std::vector<std::string>> channels;
+  std::unordered_map<
+      std::string,
+      std::unordered_map<c10::DeviceIndex, c10::DeviceIndex>>
+      deviceMaps;
 };
 
 // Struct to track the network source metrics
@@ -145,6 +162,13 @@ class TensorPipeAgent : public RpcAgent {
   const WorkerInfo& getWorkerInfo(const std::string& workerName) const override;
   const WorkerInfo& getWorkerInfo(worker_id_t workerId) const override;
   std::vector<WorkerInfo> getWorkerInfos() const override;
+  inline void setReverseDeviceMaps(
+      const std::unordered_map<
+          std::string,
+          std::unordered_map<c10::DeviceIndex, c10::DeviceIndex>>&
+          reverseDeviceMaps) {
+    reverseDeviceMaps_ = std::move(reverseDeviceMaps);
+  }
 
   std::unordered_map<std::string, std::string> getMetrics() override;
 
@@ -230,6 +254,10 @@ class TensorPipeAgent : public RpcAgent {
   };
 
   const TensorPipeRpcBackendOptions opts_;
+  std::unordered_map<
+      std::string,
+      std::unordered_map<c10::DeviceIndex, c10::DeviceIndex>>
+      reverseDeviceMaps_;
 
   ThreadPool threadPool_;
   std::shared_ptr<tensorpipe::Context> context_;
