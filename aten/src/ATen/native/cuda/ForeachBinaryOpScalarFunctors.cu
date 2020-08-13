@@ -17,7 +17,7 @@ std::vector<Tensor> foreach_binary_op(TensorList tensors, Scalar scalar) {
     tensor_lists.emplace_back(std::move(tensors.vec()));
     tensor_lists.emplace_back(std::move(vec_res));
 
-    AT_DISPATCH_ALL_TYPES_AND_COMPLEX_AND3(kBool, kBFloat16, kHalf, tensors[0].scalar_type(), "foreach_tensor_add_scalar_kernel_cuda", [&]() {
+    AT_DISPATCH_ALL_TYPES_AND_COMPLEX_AND3(kBool, kBFloat16, kHalf, tensors[0].scalar_type(), "foreach_binary_op_scalar_cuda", [&]() {
         multi_tensor_apply<2>(tensor_lists, BinaryOpScalarFunctor<scalar_t, Op>(), scalar.to<scalar_t>());
     });
     return tensor_lists[1];
@@ -30,13 +30,13 @@ void foreach_binary_op_(TensorList tensors, Scalar scalar) {
     std::vector<std::vector<at::Tensor>> tensor_lists; 
     tensor_lists.emplace_back(std::move(tensors.vec()));
 
-    AT_DISPATCH_ALL_TYPES_AND_COMPLEX_AND3(kBool, kBFloat16, kHalf, tensors[0].scalar_type(), "foreach_tensor_add_scalar_kernel_cuda_", [&]() {
+    AT_DISPATCH_ALL_TYPES_AND_COMPLEX_AND3(kBool, kBFloat16, kHalf, tensors[0].scalar_type(), "foreach_binary_op_scalar_cuda_", [&]() {
         multi_tensor_apply<1>(tensor_lists, BinaryOpScalarFunctor_<scalar_t, Op>(), scalar.to<scalar_t>());
     });
 }
 
 std::vector<Tensor> foreach_tensor_add_scalar_kernel_cuda(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_add_scalar_kernel_slow(tensors, scalar);
@@ -56,7 +56,7 @@ void foreach_tensor_add_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
 }
 
 std::vector<Tensor> foreach_tensor_sub_scalar_kernel_cuda(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow(tensors, scalar);
@@ -66,7 +66,7 @@ std::vector<Tensor> foreach_tensor_sub_scalar_kernel_cuda(TensorList tensors, Sc
 }
 
 void foreach_tensor_sub_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_sub_scalar_kernel_slow_(tensors, scalar);
@@ -76,7 +76,7 @@ void foreach_tensor_sub_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
 }
 
 std::vector<Tensor> foreach_tensor_mul_scalar_kernel_cuda(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow(tensors, scalar);
@@ -86,7 +86,7 @@ std::vector<Tensor> foreach_tensor_mul_scalar_kernel_cuda(TensorList tensors, Sc
 }
 
 void foreach_tensor_mul_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_mul_scalar_kernel_slow_(tensors, scalar);
@@ -96,7 +96,7 @@ void foreach_tensor_mul_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
 }
 
 std::vector<Tensor> foreach_tensor_div_scalar_kernel_cuda(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow(tensors, scalar);
@@ -106,7 +106,7 @@ std::vector<Tensor> foreach_tensor_div_scalar_kernel_cuda(TensorList tensors, Sc
 }
 
 void foreach_tensor_div_scalar_kernel_cuda_(TensorList tensors, Scalar scalar) {
-    TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
+    verify_list(tensors);
 
     if (!check_fast_route(tensors, scalar)) {
         return at::native::foreach_tensor_div_scalar_kernel_slow_(tensors, scalar);

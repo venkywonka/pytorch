@@ -3,6 +3,33 @@ from torch.testing._internal.common_utils import TestCase, run_tests
 from torch.testing._internal.common_device_type import instantiate_device_type_tests, dtypes
 
 class TestForeach(TestCase):
+    # Unary ops
+    @dtypes(*[torch.int32, torch.half, torch.float, torch.double, torch.complex64, torch.complex128])
+    def test_sqrt(self, device, dtype):
+        if dtype in [torch.bool, torch.int,torch.half,]:
+            return
+        tensors = [torch.ones(20, 20, device=device, dtype=dtype) for _ in range(20)]
+
+        res = torch._foreach_sqrt(tensors)
+        torch._foreach_sqrt_(tensors)
+
+        self.assertEqual([torch.sqrt(torch.ones(20, 20, device=device, dtype=dtype)) for _ in range(20)], res)
+        self.assertEqual(tensors, res)
+
+    @dtypes(*[torch.int32, torch.half, torch.float, torch.double, torch.complex64, torch.complex128])
+    def test_exp(self, device, dtype):
+        if dtype in [torch.bool, torch.int,torch.half,]:
+            return
+
+        tensors = [torch.ones(20, 20, device=device, dtype=dtype) for _ in range(20)]
+
+        res = torch._foreach_exp(tensors)
+        torch._foreach_exp_(tensors)
+
+        self.assertEqual([torch.exp(torch.ones(20, 20, device=device, dtype=dtype)) for _ in range(20)], res)
+        self.assertEqual(tensors, res)
+
+    # Ops with scalar
     @dtypes(*torch.testing.get_all_dtypes())
     def test_int_scalar(self, device, dtype):
         tensors = [torch.zeros(10, 10, device=device, dtype=dtype) for _ in range(10)]
@@ -192,6 +219,7 @@ class TestForeach(TestCase):
         for t in tensors:
             self.assertEqual(t, torch.ones(20, 20, device=device, dtype=dtype).div(2))
 
+    # Ops with list
     @dtypes(*torch.testing.get_all_dtypes())
     def test_bin_op_list_same_size_tensors(self, device, dtype):
         if dtype == torch.bool:
