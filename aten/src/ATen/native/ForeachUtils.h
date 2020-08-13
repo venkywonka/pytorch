@@ -18,11 +18,7 @@ void verify_list(TensorList tensors) {
   }
 }
 
-// In order to go via 'fast' path, sevelar conditions must be satisfied 
-// - All tensors must have strided layout
-// - All tensors must be non overlapping and dense
-// - Resulting tensor must have the same dtype as the input one
-bool check_fast_route(TensorList tensors, Scalar scalar) {
+bool check_fast_route(TensorList tensors) {
   TORCH_CHECK(tensors.size() > 0, "Tensor list must have at least one tensor.");
 
   for (auto t : tensors) {
@@ -33,7 +29,20 @@ bool check_fast_route(TensorList tensors, Scalar scalar) {
     if (!t.is_non_overlapping_and_dense()) {
       return false;
     }
+  }
+  return true;
+}
 
+// In order to go via 'fast' path, sevelar conditions must be satisfied 
+// - All tensors must have strided layout
+// - All tensors must be non overlapping and dense
+// - Resulting tensor must have the same dtype as the input one
+bool check_fast_route(TensorList tensors, Scalar scalar) {
+  if (!check_fast_route(tensors)) {
+    return false;
+  }
+
+  for (const auto& t : tensors) {
     // complex scalar + integral or boolean tensor will result in complex tensor
     if (scalar.isComplex() && at::isIntegralType(t.scalar_type(), /*includeBool*/ true)) {
       return false;

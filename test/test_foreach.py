@@ -3,8 +3,10 @@ from torch.testing._internal.common_utils import TestCase, run_tests
 from torch.testing._internal.common_device_type import instantiate_device_type_tests, dtypes
 
 class TestForeach(TestCase):
+    #
     # Unary ops
-    @dtypes(*[torch.int32, torch.half, torch.float, torch.double, torch.complex64, torch.complex128])
+    #
+    @dtypes(*[torch.float, torch.double, torch.complex64, torch.complex128])
     def test_sqrt(self, device, dtype):
         if dtype in [torch.bool, torch.int,torch.half,]:
             return
@@ -16,7 +18,7 @@ class TestForeach(TestCase):
         self.assertEqual([torch.sqrt(torch.ones(20, 20, device=device, dtype=dtype)) for _ in range(20)], res)
         self.assertEqual(tensors, res)
 
-    @dtypes(*[torch.int32, torch.half, torch.float, torch.double, torch.complex64, torch.complex128])
+    @dtypes(*[torch.float, torch.double, torch.complex64, torch.complex128])
     def test_exp(self, device, dtype):
         if dtype in [torch.bool, torch.int,torch.half,]:
             return
@@ -29,7 +31,48 @@ class TestForeach(TestCase):
         self.assertEqual([torch.exp(torch.ones(20, 20, device=device, dtype=dtype)) for _ in range(20)], res)
         self.assertEqual(tensors, res)
 
+    #
+    # Pointwise ops
+    #
+    @dtypes(*torch.testing.get_all_dtypes(include_bfloat16=False, include_bool=False, include_complex=False))
+    def test_addcmul(self, device, dtype):
+        if device == 'cpu':
+            if dtype in [torch.bfloat16, torch.half]:
+                return
+
+        tensors = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+        tensors1 = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+        tensors2 = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+
+        res = torch._foreach_addcmul(tensors, tensors1, tensors2, 2)
+        self.assertEqual([tensors[n].addcmul(tensors1[n], tensors2[n], value=2) for n in range(20)], res)
+
+        torch._foreach_addcmul_(tensors, tensors1, tensors2, 2)
+        self.assertEqual(res, tensors)
+
+    @dtypes(*torch.testing.get_all_dtypes(include_bfloat16=False, include_bool=False, include_complex=False))
+    def test_addcdiv(self, device, dtype):
+        if dtype in [torch.int8, torch.int16, torch.int32, torch.int64, torch.uint8]:
+            # Integer division of tensors using div or / is no longer supported
+            return
+
+        if device == 'cpu':
+            if dtype in [torch.bfloat16, torch.half]:
+                return
+
+        tensors = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+        tensors1 = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+        tensors2 = [torch.ones(20, 20, device=device, dtype=dtype) for n in range(20)]
+
+        res = torch._foreach_addcdiv(tensors, tensors1, tensors2, 2)
+        self.assertEqual([tensors[n].addcdiv(tensors1[n], tensors2[n], value=2) for n in range(20)], res)
+
+        torch._foreach_addcdiv_(tensors, tensors1, tensors2, 2)
+        self.assertEqual(res, tensors)
+
+    #
     # Ops with scalar
+    #
     @dtypes(*torch.testing.get_all_dtypes())
     def test_int_scalar(self, device, dtype):
         tensors = [torch.zeros(10, 10, device=device, dtype=dtype) for _ in range(10)]
@@ -219,7 +262,9 @@ class TestForeach(TestCase):
         for t in tensors:
             self.assertEqual(t, torch.ones(20, 20, device=device, dtype=dtype).div(2))
 
+    #
     # Ops with list
+    #
     @dtypes(*torch.testing.get_all_dtypes())
     def test_bin_op_list_same_size_tensors(self, device, dtype):
         if dtype == torch.bool:
@@ -265,7 +310,6 @@ class TestForeach(TestCase):
         for _ in range(20):
             tensors1.append(torch.zeros(20, 20, device=device, dtype=dtype))
             tensors2.append(torch.ones(20, 20, device=device, dtype=dtype))
-
 
         torch._foreach_add_(tensors1, tensors2)
         for t in tensors1:
